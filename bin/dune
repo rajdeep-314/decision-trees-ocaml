@@ -1,0 +1,4 @@
+(executable
+ (public_name decision_trees)
+ (name main)
+ (libraries dtree))
