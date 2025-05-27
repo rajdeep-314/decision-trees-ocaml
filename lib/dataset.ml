@@ -6,7 +6,7 @@
 
 
 type attr = Attr of string          (* Attribute type.  *)
-(* type lbl = Label of string          (* Label type.      *) *)
+type lbl = Lbl of string            (* Label type.      *)
 
 type aval = Aval of string          (* Attribute values type.       *)
 type lval = Lval of string          (* Label values (classes) type. *)
@@ -14,20 +14,34 @@ type lval = Lval of string          (* Label values (classes) type. *)
 
 type t = {
     n_attrs : int;
+    mutable size : int;
     attrs : attr list;
+    mutable lname : lbl;
     data : (attr, aval list) Hashtbl.t;
     mutable vals: lval list
 }
 
 
+(* The n'th value of the attribute atb. *)
+let attr_nth (ds : t) (atb : attr) (n : int) =
+    List.nth (Hashtbl.find ds.data atb) n
+
+let val_nth (ds : t) (n : int) = List.nth ds.vals n
+
+(* The n'th row of the dataset. *)
+let row_nth (ds : t) (n : int) : aval list * lval =
+    (List.fold_left (fun x y -> x @ [attr_nth ds y n]) [] ds.attrs, val_nth ds n)
+
+
 (* Some functions to transform Parser.t values to attr,
    aval and lval values. *)
 let attr_of_tok (Parser.Tok tok) = Attr tok
+let lbl_of_tok (Parser.Tok tok) = Lbl tok
 let aval_of_tok (Parser.Tok tok) = Aval tok
 let lval_of_tok (Parser.Tok tok) = Lval tok
 
 
-(* Some helper functions. *)
+(* Printing functions. *)
 let print_attr (Attr s) (term : string) : unit = Printf.printf "%s%s" s term
 let print_attr_list (l : attr list) (sep : string) (term : string) : unit =
         let () = List.iter (fun x -> print_attr x sep) l
@@ -42,28 +56,57 @@ let print_data_entry (a : attr) (l : aval list) : unit =
         print_attr a ": ";
         print_aval_list l " " "\n"
 
-(* Printing the dataset. *)
-let print (ds : t) : unit =
+let print_val (Lval v) (term : string) : unit = Printf.printf "%s%s" v term
+let print_vals (ds : t) : unit =
+        List.iter (fun v -> print_val v " ") ds.vals; print_endline ""
+
+
+(* Printing the entire dataset, attribute-wise. *)
+let print_by_attr (ds : t) : unit =
+    Printf.printf "Size: %d\n" ds.size;
     Printf.printf "# Attributes = %d\nAttributes\t:\t| " ds.n_attrs;
     print_attr_list ds.attrs " | " "\n";
-    Hashtbl.iter print_data_entry ds.data
+    Hashtbl.iter print_data_entry ds.data;
+    Printf.printf "\n%s: " ((fun (Lbl s) -> s) ds.lname);
+    print_vals ds
 
+
+let print_nth_row (ds : t) (n : int) (sep : string) (term : string) : unit =
+    let row, value = row_nth ds n in
+    Printf.printf "%d\t| \t" (n + 1);
+    print_aval_list row sep "";
+    print_val value term
+
+(* A list with the first n natural numbers greater than 0. *)
+let rec nat_nums (n : int) : int list = if n = 0 then [] else (nat_nums (n-1)) @ [n]
+
+(* Printing the entire dataset, row-wise, in a CSV-like format. *)
+let print (ds : t) : unit =
+    Printf.printf "Dataset size = %d\n\nSr. No.\t|\t" ds.size;
+    print_attr_list ds.attrs ", " "";
+    Printf.printf "%s\n" ((fun (Lbl s) -> s) ds.lname);
+    List.iter (fun n -> print_nth_row ds (n - 1) ", " "\n") (nat_nums ds.size)
 
 
 (* Constructing the data set from the parsed CSV. *)
 
-let rec remove_last (l : 'a list) : 'a list =
+let rec split_last_helper (l : 'a list) (acc : 'a list) : 'a list * 'a =
     match l with
-    | [] -> []
-    | _ :: [] -> []
-    | x :: xs -> x :: remove_last xs
+    | [] -> failwith "Insufficient size for split_last."
+    | last :: [] -> (acc, last)
+    | x :: xs -> split_last_helper xs (acc @ [x])
 
 
-let extract_attributes (l : Parser.t list) : attr list =
+let split_last (l : 'a list) : 'a list * 'a =
+    split_last_helper l []
+
+
+let extract_attributes_label (l : Parser.t list) : attr list * lbl =
     match l with
     | [] -> failwith "Invalid format."
     | _ :: [] -> failwith "Invalid format."
-    | _ -> remove_last (List.map attr_of_tok l)
+    | _ -> let first, last = split_last l in
+            (List.map attr_of_tok first, lbl_of_tok last)
 
 
 (* This adds the new attribute value in "revsere order" in the
@@ -75,7 +118,9 @@ let rec process_row (l : Parser.t list) (atts : attr list) (ds : t) : unit =
             let old_list = Hashtbl.find ds.data atb in
             Hashtbl.replace ds.data atb (aval_of_tok tok :: old_list);
             process_row toks atbs ds
-    | ltok :: [], [] -> ds.vals <- (lval_of_tok ltok) :: ds.vals
+    | ltok :: [], [] ->
+            ds.vals <- (lval_of_tok ltok) :: ds.vals;
+            ds.size <- ds.size + 1
     | _, _ -> ()            (* this shouldn't happen if the formatting is correct. *)
 
 
@@ -91,11 +136,12 @@ let rec hashtable_init (tbl : (attr, aval list) Hashtbl.t) (alist : attr list) :
                     hashtable_init tbl atbs
 
 
-(* Creates a new dataset with atts - the given attribute list. *)
-let new_dataset (atts : attr list) : t =
+(* Creates a new dataset with atts - the given attribute list, and
+   lname - the name of the labels. *)
+let new_dataset (atts : attr list) (lname : lbl) : t =
     let tbl = Hashtbl.create 100 in
     let () = hashtable_init tbl atts in
-    { n_attrs = List.length atts; attrs = atts; data = tbl; vals = [] }
+    { n_attrs = List.length atts; size = 0; attrs = atts; lname = lname; data = tbl; vals = [] }
 
 
 let reverse_list (ds : t) (atb : attr) : unit =
@@ -110,9 +156,10 @@ let of_csv (csv : Parser.t list list) : t =
     | [] -> failwith "Invalid format."
     | _ :: [] -> failwith "Invalid format - No values, only header."
     | header :: tail ->
-            let atts = extract_attributes header in
-            let ds = new_dataset atts in
+            let atts, lname = extract_attributes_label header in
+            let ds = new_dataset atts lname in
             let () = process_rows tail ds in
             let _ = List.map (fun atb -> reverse_list ds atb) atts in
+            let () = ds.vals <- List.rev ds.vals in
             ds
 
