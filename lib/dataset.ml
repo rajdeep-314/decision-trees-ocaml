@@ -4,6 +4,8 @@
 
 *)
 
+open Utils
+
 
 type attr = Attr of string          (* Attribute type.  *)
 type lbl = Lbl of string            (* Label type.      *)
@@ -13,24 +15,70 @@ type lval = Lval of string          (* Label values (classes) type. *)
 
 
 type t = {
-    n_attrs : int;
+    mutable n_attrs : int;
     mutable size : int;
-    attrs : attr list;
+    mutable attrs : attr list;
     mutable lname : lbl;
     data : (attr, aval list) Hashtbl.t;
     mutable vals: lval list
 }
 
+(* The size of the datset. *)
+let size (ds : t) : int = ds.size
+
+(* The number of attributes of the dataset. *)
+let n_attrs (ds : t) : int = ds.n_attrs
+
 
 (* The n'th value of the attribute atb. *)
-let attr_nth (ds : t) (atb : attr) (n : int) =
+let nth_of_attr (ds : t) (atb : attr) (n : int) : aval =
     List.nth (Hashtbl.find ds.data atb) n
 
-let val_nth (ds : t) (n : int) = List.nth ds.vals n
+(* The n'th attribute of the dataset. *)
+let nth_attr (ds : t) (n : int) : attr = List.nth ds.attrs n
+
+(* The n'th label value. *)
+let nth_lval (ds : t) (n : int) : lval = List.nth ds.vals n
 
 (* The n'th row of the dataset. *)
-let row_nth (ds : t) (n : int) : aval list * lval =
-    (List.fold_left (fun x y -> x @ [attr_nth ds y n]) [] ds.attrs, val_nth ds n)
+let nth_row (ds : t) (n : int) : aval list * lval =
+    (List.fold_left (fun x y -> x @ [nth_of_attr ds y n]) [] ds.attrs, nth_lval ds n)
+
+
+(* Returns a list of the attribute values corresponding
+   to the attribute atb.
+   Causes an exception for an invalid attribute. *)
+let list_of_attr (ds : t) (atb : attr) : aval list = Hashtbl.find ds.data atb
+
+(* List of label values from ds. *)
+let list_of_lvals (ds : t) : lval list = ds.vals
+
+(* Copies a dataset and returns another one practically
+   identical to it. *)
+let cpy (ds : t) : t =
+    { n_attrs = ds.n_attrs;
+      size = ds.size;
+      attrs = ds.attrs;
+      lname = ds.lname;
+      data = ds.data;
+      vals = ds.vals }
+
+(* Removes the attribute atb from ds and returns a new dataset. *)
+let rem_attr (ds : t) (atb : attr) : t =
+    let nds = cpy ds in
+    let () = Hashtbl.remove nds.data atb in
+    let () = nds.n_attrs <- nds.n_attrs - 1 in
+    let () = nds.attrs <- List.filter (fun x -> not (x = atb)) nds.attrs in
+    nds
+
+
+(* Filters and returns the label values corresponding to
+   those entries in which atb has the value av.
+   NOTE:    Doesn't guarantee any order. *)
+let filter (ds : t) (atb : attr) (av : aval) : lval list =
+    let l = list_pdt (list_of_attr ds atb) (list_of_lvals ds) in
+    let filtered = List.filter (fun (x, _) -> x = av) l in
+    List.map snd filtered
 
 
 (* Some functions to transform Parser.t values to attr,
@@ -56,9 +104,9 @@ let print_data_entry (a : attr) (l : aval list) : unit =
         print_attr a ": ";
         print_aval_list l " " "\n"
 
-let print_val (Lval v) (term : string) : unit = Printf.printf "%s%s" v term
-let print_vals (ds : t) : unit =
-        List.iter (fun v -> print_val v " ") ds.vals; print_endline ""
+let print_lval (Lval v) (term : string) : unit = Printf.printf "%s%s" v term
+let print_lvals (ds : t) : unit =
+        List.iter (fun v -> print_lval v " ") ds.vals; print_endline ""
 
 
 (* Printing the entire dataset, attribute-wise. *)
@@ -68,21 +116,21 @@ let print_by_attr (ds : t) : unit =
     print_attr_list ds.attrs " | " "\n";
     Hashtbl.iter print_data_entry ds.data;
     Printf.printf "\n%s: " ((fun (Lbl s) -> s) ds.lname);
-    print_vals ds
+    print_lvals ds
 
 
 let print_nth_row (ds : t) (n : int) (sep : string) (term : string) : unit =
-    let row, value = row_nth ds n in
-    Printf.printf "%d\t| \t" (n + 1);
+    let row, value = nth_row ds n in
+    Printf.printf "%d\t\t|\t" (n + 1);
     print_aval_list row sep "";
-    print_val value term
+    print_lval value term
 
 (* A list with the first n natural numbers greater than 0. *)
 let rec nat_nums (n : int) : int list = if n = 0 then [] else (nat_nums (n-1)) @ [n]
 
 (* Printing the entire dataset, row-wise, in a CSV-like format. *)
 let print (ds : t) : unit =
-    Printf.printf "Dataset size = %d\n\nSr. No.\t|\t" ds.size;
+    Printf.printf "Dataset size = %d\nNo. of attributes = %d\n\nSr. No.\t|\t" ds.size ds.n_attrs;
     print_attr_list ds.attrs ", " "";
     Printf.printf "%s\n" ((fun (Lbl s) -> s) ds.lname);
     List.iter (fun n -> print_nth_row ds (n - 1) ", " "\n") (nat_nums ds.size)
