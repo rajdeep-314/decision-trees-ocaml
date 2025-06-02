@@ -39,7 +39,7 @@ let gain (ds : Ds.t) (atb : Ds.attr) : float =
     let val_lvals = List.map (fun x -> Ds.filter ds atb x) vals in
     let val_entropies = List.map entropy_of_list val_lvals in
     let weights = frequencies alist in
-    let attr_entropy = entropy_of_list alist in
-    attr_entropy -. (w_avg weights val_entropies)
+    let i_entropy = entropy_of_list (Ds.list_of_lvals ds) in
+    i_entropy -. (w_avg weights val_entropies)
 
 

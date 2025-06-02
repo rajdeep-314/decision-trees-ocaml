@@ -12,5 +12,5 @@ Currently, all that's available is a basic parser to parse CSV files and a type 
 
 - Work on `dtree.ml`.
 - Make a REPL interface.
-
+- Proper commenting.
 

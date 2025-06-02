@@ -41,3 +41,5 @@ let ind = if 5 <= Dataset.size ndset then 4 else 0
 let () = Printf.printf "\nThe label value for row %d is " (ind + 1)
 let () = Dataset.print_lval (Dataset.nth_lval ndset ind) "\n"
 
+let () = Printf.printf "Gain for the new first attribute = %f\n" (Heur.gain ndset (List.nth ndset.attrs 0))
+

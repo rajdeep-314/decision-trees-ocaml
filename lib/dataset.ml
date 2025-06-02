@@ -27,7 +27,7 @@ type t = {
 let size (ds : t) : int = ds.size
 
 (* The number of attributes of the dataset. *)
-let n_attrs (ds : t) : int = ds.n_attrs
+let nattrs (ds : t) : int = ds.n_attrs
 
 
 (* The n'th value of the attribute atb. *)
@@ -55,17 +55,17 @@ let list_of_lvals (ds : t) : lval list = ds.vals
 
 (* Copies a dataset and returns another one practically
    identical to it. *)
-let cpy (ds : t) : t =
+let copy (ds : t) : t =
     { n_attrs = ds.n_attrs;
       size = ds.size;
       attrs = ds.attrs;
       lname = ds.lname;
-      data = ds.data;
+      data = Hashtbl.copy ds.data;
       vals = ds.vals }
 
 (* Removes the attribute atb from ds and returns a new dataset. *)
 let rem_attr (ds : t) (atb : attr) : t =
-    let nds = cpy ds in
+    let nds = copy ds in
     let () = Hashtbl.remove nds.data atb in
     let () = nds.n_attrs <- nds.n_attrs - 1 in
     let () = nds.attrs <- List.filter (fun x -> not (x = atb)) nds.attrs in

@@ -62,3 +62,35 @@ let frequencies (l : 'a list) : int list =
     list_of_values tbl
 
 
+(* Returns x such that (x, y) is a pair in l and y is the
+   maximum of all snd values, where these values are ints. *)
+let max_snd_int (l : ('a * int) list) : 'a =
+    let sorted = List.sort (fun (_, b) (_, d) -> Int.compare b d) l in
+    fst (List.nth sorted 0)
+
+(* Essentially the same as max_snd_int but with the snd
+   values being floats. *)
+let max_snd_float (l : ('a * float) list) : 'a =
+    let sorted = List.sort (fun (_, b) (_, d) -> Float.compare b d) l in
+    fst (List.nth sorted 0)
+
+(* Returns the key of tbl with the maximum integer value. *)
+let htbl_mode (tbl : ('a, int) Hashtbl.t) : 'a =
+    let fl = List.of_seq (Hashtbl.to_seq tbl) in
+    max_snd_int fl
+
+
+(* The value from l with the maximum frequency. *)
+let list_mode (l : 'a list) : 'a =
+    htbl_mode (freq_dist l)
+
+
+(* True if all the elements in l are the same,
+   and false otherwise. *)
+let rec is_homogeneous (l : 'a list) : bool =
+    match l with
+    | [] -> true
+    | _ :: [] -> true
+    | x :: (y :: _ as tail) -> x = y && is_homogeneous tail
+
+

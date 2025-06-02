@@ -22,8 +22,15 @@ type t = Tok of string
 let to_ignore : char list =
     [ ' '; '\n'; '\t'; '\r'; ',' ]
 
+(* Characters to split based on. *)
+let to_split : char list =
+    [ ',' ]
+
 (* If c is to be ignored or not. *)
 let is_ignored (c : char) : bool = List.mem c to_ignore
+
+(* If c is to be split based-on or not. *)
+let is_split (c : char) : bool = List.mem c to_split
 
 (* s[:1], in Python terms. *)
 let head (s : string) : string =
@@ -49,7 +56,7 @@ let rec strip_leading (s : string) : string =
    string. *)
 let rec tokenize_unit_helper (s : string) (acc : string) : t * string =
     if s = "" then Tok acc, ""
-    else if is_ignored s.[0] then Tok acc, strip_leading s
+    else if is_split s.[0] then Tok acc, strip_leading s
     else tokenize_unit_helper (tail s) (acc ^ (head s))
 
 (* Performs one unit of tokenization on s. *)
@@ -69,8 +76,8 @@ let rec tokenize_helper (s : string) (acc : t list) : t list =
    corresponding token list.
 
    Example:
-       parse_CSV_line "abcd, efgh, x,   y" ->
-           [ Tok "abcd"; Tok "efgh"; Tok "x"; Tok "y" ]
+       parse_line "abcd, efgh, x,   y z" ->
+           [ Tok "abcd"; Tok "efgh"; Tok "x"; Tok "y z" ]
 *)
 let parse_line (s : string) : t list = tokenize_helper s []
 
