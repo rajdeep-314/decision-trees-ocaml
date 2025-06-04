@@ -6,6 +6,45 @@
 *)
 
 
+(* Helper function for indices_with_val.
+   acc is the list of "accumulated indices" and ind
+   is the starting index. *)
+let rec indices_with_val_helper (l : 'a list) (v : 'a) (acc : int list) (ind : int) : int list =
+    match l with
+    | [] -> acc
+    | x :: xs ->
+            let new_ind = ind + 1 in
+            if x = v then indices_with_val_helper xs v (ind :: acc) new_ind
+            else indices_with_val_helper xs v acc new_ind
+
+
+(* Returns the indices of l that have value v, in the form
+   of an int list.
+   NOTE:    Order is not guaranteed. *)
+let indices_with_val (l : 'a list) (v : 'a) : int list =
+    indices_with_val_helper l v [] 0
+
+
+(* Returns the elements of l, the indices of which are not in inds. *)
+let list_index_filter (l : 'a list) (inds : int list) : 'a list =
+    List.filteri (fun x _ -> List.mem x inds) l
+
+
+(* Removes the element at index n from l and returns
+   the new list.
+   NOTE:    Returns the same list for an invalid index. *)
+let rec list_rem (l : 'a list) (n : int) : 'a list =
+    if n < 0 then l else
+    if n = 0 then
+        match l with
+        | [] -> []
+        | _ :: xs -> xs
+    else
+        match l with
+        | [] -> []
+        | x :: xs -> x :: list_rem xs (n - 1)
+
+
 (* The Cartesian-esque product of two lists. *)
 let rec list_pdt (l1 : 'a list) (l2 : 'b list) : ('a * 'b) list =
     match l1, l2 with
@@ -65,13 +104,13 @@ let frequencies (l : 'a list) : int list =
 (* Returns x such that (x, y) is a pair in l and y is the
    maximum of all snd values, where these values are ints. *)
 let max_snd_int (l : ('a * int) list) : 'a =
-    let sorted = List.sort (fun (_, b) (_, d) -> Int.compare b d) l in
+    let sorted = List.sort (fun (_, b) (_, d) -> -(Int.compare b d)) l in
     fst (List.nth sorted 0)
 
 (* Essentially the same as max_snd_int but with the snd
    values being floats. *)
 let max_snd_float (l : ('a * float) list) : 'a =
-    let sorted = List.sort (fun (_, b) (_, d) -> Float.compare b d) l in
+    let sorted = List.sort (fun (_, b) (_, d) -> -(Float.compare b d)) l in
     fst (List.nth sorted 0)
 
 (* Returns the key of tbl with the maximum integer value. *)

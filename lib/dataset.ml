@@ -19,7 +19,7 @@ type t = {
     mutable size : int;
     mutable attrs : attr list;
     mutable lname : lbl;
-    data : (attr, aval list) Hashtbl.t;
+    mutable data : (attr, aval list) Hashtbl.t;
     mutable vals: lval list
 }
 
@@ -44,6 +44,8 @@ let nth_lval (ds : t) (n : int) : lval = List.nth ds.vals n
 let nth_row (ds : t) (n : int) : aval list * lval =
     (List.fold_left (fun x y -> x @ [nth_of_attr ds y n]) [] ds.attrs, nth_lval ds n)
 
+(* If ds is empty (size = 0). *)
+let is_empty (ds : t) : bool = ds.size = 0
 
 (* Returns a list of the attribute values corresponding
    to the attribute atb.
@@ -72,10 +74,31 @@ let rem_attr (ds : t) (atb : attr) : t =
     nds
 
 
+(* Removes rows from ds where atb has the value v, and
+   returns a new dataset.
+   This new dataset does not have the attribute atb.
+   NOTE:    Returns a copy of the dataset for an invalid attribute. *)
+let attr_filter (ds : t) (atb : attr) (v : aval) : t =
+    let nds = copy ds in
+    if List.mem atb ds.attrs = false then
+        nds
+    else
+        (* making the new hash table. *)
+        let aval_list = list_of_attr ds atb in
+        let indices = indices_with_val aval_list v in
+        let attr_lists = List.of_seq (Hashtbl.to_seq ds.data) in
+        let new_attr_lists = List.map (fun (x, y) -> (x, list_index_filter y indices)) attr_lists in
+        let () = nds.data <- Hashtbl.of_seq (List.to_seq new_attr_lists) in
+        (* setting the rest of the attributes. *)
+        let () = nds.size <- List.length (Hashtbl.find ds.data (List.nth ds.attrs 0)) in
+        let () = nds.vals <- list_index_filter nds.vals indices in
+        rem_attr nds atb
+
+
 (* Filters and returns the label values corresponding to
    those entries in which atb has the value av.
    NOTE:    Doesn't guarantee any order. *)
-let filter (ds : t) (atb : attr) (av : aval) : lval list =
+let lval_filter (ds : t) (atb : attr) (av : aval) : lval list =
     let l = list_pdt (list_of_attr ds atb) (list_of_lvals ds) in
     let filtered = List.filter (fun (x, _) -> x = av) l in
     List.map snd filtered
@@ -87,6 +110,11 @@ let attr_of_tok (Parser.Tok tok) = Attr tok
 let lbl_of_tok (Parser.Tok tok) = Lbl tok
 let aval_of_tok (Parser.Tok tok) = Aval tok
 let lval_of_tok (Parser.Tok tok) = Lval tok
+
+let string_of_attr (Attr s) = s
+let string_of_aval (Aval s) = s
+let string_of_lbl (Lbl s) = s
+let string_of_lval (Lval s) = s
 
 
 (* Printing functions. *)
