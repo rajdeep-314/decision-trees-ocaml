@@ -1,0 +1,16 @@
+age, income, student, credit rating, buys computer
+a, high, no, fair, no
+a, high, no, excellent, no
+b, high, no, fair, yes
+c, medium, no, fair, yes
+c, low, yes, fair, yes
+c, low, yes, excellent, no
+b, low, yes, excellent, yes
+a, medium, no, fair, no
+a, low, yes, fair, yes
+c, medium, yes, fair, yes
+a, medium, yes, excellent, yes
+b, medium, no, excellent, yes
+b, high, yes, fair, yes
+c, medium, no, excellent, no
+
