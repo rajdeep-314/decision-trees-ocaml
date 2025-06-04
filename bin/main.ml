@@ -53,11 +53,11 @@ let () = Printf.printf "Gain for the new first attribute = %f\n" (Heur.gain ndse
 
 let tree : T.t = T.id3 dset
 
-let () = Printf.printf "\n\nPrinting the decision tree now.\n\n"
+let () = Printf.printf "\n\nPrinting the decision tree.\n\n"
 let () = T.print_p tree
 
 
 (* Query demonstration. *)
 
-let () = Printf.printf "\n\nThe accuracy of the tree on the dataset is: %f percent\n" (100. *. (T.test_on_ds tree dset))
+let () = Printf.printf "\nThe accuracy of the tree on the dataset is: %f percent\n" (100. *. (T.test_on_ds tree dset))
 
