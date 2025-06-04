@@ -47,3 +47,43 @@ let print_p (tree : t) : unit =
     print_p_helper tree; print_endline ""
 
 
+(* Prints the root of the tree. *)
+let print_root (tree : t) : unit =
+    match tree with
+    | Leaf l -> Printf.printf "%s" (Ds.string_of_lval l)
+    | Node (n, _) -> Printf.printf "%s" (Ds.string_of_attr n)
+
+
+module Q = Query                (* Will probably remove this later. *)
+
+
+(* Predicts a label value based on the query.
+   Returns None in case of some issues (invalid attribute, for example). *)
+let rec apply_opt (tree : t) (Q.Qr ql as q: Q.t) : Ds.lval option =
+    match tree with
+    | Leaf l -> Some l
+    | Node (n, l) ->
+            if list_fst_mem ql n = false then None          (* Incomplete query. *)
+            else
+                apply_opt (list_snd_of_fst l (list_snd_of_fst ql n)) (Q.rem q n)
+
+
+(* Same as apply_opt, but instead of returning None, it raises
+   an exception. *)
+let apply (tree : t) (q : Q.t) : Ds.lval =
+    match apply_opt tree q with
+    | None -> failwith "Invalid arguments passed to apply."
+    | Some l -> l
+
+
+(* Test the performance of a tree on the data that it was
+   trained on.
+   NOTE:    The accuracy SHOULD be 100%. *)
+let test_on_ds (tree : t) (ds : Ds.t) : float =
+    let indices = nat_nums ds.size in
+    let queries = List.map (fun i -> Q.of_row ds i) indices in
+    let predictions = List.map (fun q -> apply tree q) queries in
+    let actual = List.rev ds.vals in
+    list_accuracy predictions actual
+
+

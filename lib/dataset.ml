@@ -133,6 +133,10 @@ let print_data_entry (a : attr) (l : aval list) : unit =
         print_aval_list l " " "\n"
 
 let print_lval (Lval v) (term : string) : unit = Printf.printf "%s%s" v term
+let print_lval_list (l : lval list) (sep : string) (term : string) : unit =
+        let () = List.iter (fun x -> print_lval x sep) l
+        in Printf.printf "%s" term
+
 let print_lvals (ds : t) : unit =
         List.iter (fun v -> print_lval v " ") ds.vals; print_endline ""
 

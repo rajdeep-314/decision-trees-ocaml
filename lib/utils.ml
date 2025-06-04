@@ -6,6 +6,48 @@
 *)
 
 
+(* Helper function for list_accuracy. *)
+let rec list_accuracy_helper (l : 'a list) (tl : 'a list) (acc : int * int) : int * int =
+    let correct, total = acc in
+    match l, tl with
+    | x :: xs, tx :: txs ->
+            if x = tx then list_accuracy_helper xs txs (correct + 1, total + 1)
+            else list_accuracy_helper xs txs (correct, total + 1)
+    | _, _ -> acc
+
+
+(* The accuracy of list l, compared to the tally list tl.
+   If the lengths of l and tl differ, the least one is considered. *)
+let list_accuracy (l : 'a list) (tl : 'a list) : float =
+    let correct, total = list_accuracy_helper l tl (0, 0) in
+    (float_of_int correct) /. (float_of_int total)
+
+
+(* Returns a list of the first n natural numbers (including 0).
+   NOTE:    No order is guaranteed. *)
+let rec nat_nums n =
+    if n = 0 then [] else (n - 1) :: (nat_nums (n - 1))
+
+
+(* Returns y such that (v, y) is in l.
+   NOTE:    Raises an exception if (v, _) is not in l. *)
+let rec list_snd_of_fst (l : ('a * 'b) list) (v : 'a) : 'b =
+    match l with
+    | [] -> failwith "Invalid arguments to list_snd_of_fst."
+    | (x, y) :: xs ->
+            if x = v then y
+            else list_snd_of_fst xs v
+
+
+(* Returns if there exists some (v, _) in l. *)
+let rec list_fst_mem (l : ('a * 'b) list) (v : 'a) : bool =
+    match l with
+    | [] -> false
+    | (x, _) :: xs ->
+            if x = v then true
+            else list_fst_mem xs v
+
+
 (* Helper function for indices_with_val.
    acc is the list of "accumulated indices" and ind
    is the starting index. *)
